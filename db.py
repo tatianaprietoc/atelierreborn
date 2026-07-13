@@ -6,7 +6,16 @@ import psycopg2.extras
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# DATABASE_URL works if you set it by hand. If you connect the project through
+# Vercel's Supabase marketplace integration instead, it injects the connection
+# string under one of these names instead — check whichever is actually set.
+# (Skips POSTGRES_PRISMA_URL: it has a "?pgbouncer=true" suffix meant for
+# Prisma that psycopg2/libpq doesn't recognize as a connection parameter.)
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("POSTGRES_URL")
+    or os.environ.get("POSTGRES_URL_NON_POOLING")
+)
 
 
 class Connection:
