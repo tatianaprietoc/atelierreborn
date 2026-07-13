@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set active_page = "movimientos" %}
+{% block content %}
+<div class="page-title">Movimientos</div>
+<div class="page-subtitle">Registra entradas, salidas y traslados entre ubicaciones.</div>
+
+{% if products|length == 0 or locations|length == 0 %}
+  <div class="empty-state">
+    <div class="empty-state__title">Importa tu catálogo para empezar</div>
+    <div class="empty-state__body">Necesitas al menos un producto y una ubicación antes de registrar movimientos.</div>
+  </div>
+{% else %}
+<div class="card" style="padding:20px;margin-bottom:24px;max-width:640px;">
+  <div style="margin-bottom:16px;">
+    <div class="tabs">
+      {% for key, cfg in type_config.items() %}
+        <a class="{{ 'active' if key == active_type else '' }}" href="{{ url_for('movimientos', tipo=key) }}">{{ cfg.label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('registrar_movimiento') }}">
+    <input type="hidden" name="tipo" value="{{ active_type }}">
+    <div class="form-grid" style="margin-bottom:16px;">
+      <label class="field">
+        <span class="field__label">Producto</span>
+        <select class="select" name="sku" required>
+          <option value="" disabled selected>Buscar producto…</option>
+          {% for p in products %}
+            <option value="{{ p.sku }}">{{ p.sku }} — {{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field">
+        <span class="field__label">Cantidad</span>
+        <input class="input" type="number" name="cantidad" min="1" value="1" required>
+      </label>
+      {% if type_config[active_type].needs_origin %}
+      <label class="field">
+        <span class="field__label">Ubicación origen</span>
+        <select class="select" name="origen" required>
+          {% for l in locations %}
+            <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      {% if type_config[active_type].needs_dest %}
+      <label class="field">
+        <span class="field__label">Ubicación destino</span>
+        <select class="select" name="destino" required>
+          {% for l in locations %}
+            <option value="{{ l.id }}">{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      <label class="field form-grid--full">
+        <span class="field__label">Nota (opcional)</span>
+        <input class="input" type="text" name="nota" placeholder="Ej. corrección de conteo">
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary">Registrar {{ type_config[active_type].label|lower }}</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="section-title">Historial reciente</div>
+{% if history|length == 0 %}
+  <div class="empty-state">
+    <div class="empty-state__title">Todavía no hay movimientos</div>
+    <div class="empty-state__body">Los movimientos que registres aparecerán aquí.</div>
+  </div>
+{% else %}
+<div class="movement-history">
+  {% for h in history %}
+    <div class="movement-row">
+      <span class="movement-row__type">{{ h.type }}</span>
+      <span class="movement-row__desc">
+        {{ h.product_name }}
+        {% if h.origin_name %} · {{ h.origin_name }}{% endif %}
+        {% if h.dest_name %} → {{ h.dest_name }}{% endif %}
+      </span>
+      <span class="movement-row__qty">{{ h.qty }} un.</span>
+      <span class="movement-row__date">{{ h.created_at[5:10] }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

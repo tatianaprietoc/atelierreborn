@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Atelier Reborn — Control de inventarios{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/typography.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/spacing.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+</head>
+<body>
+{% block body %}
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar__brand">Atelier Reborn</div>
+    <nav class="sidebar__nav">
+      <a class="sidebar__link {{ 'active' if active_page == 'existencias' else '' }}" href="{{ url_for('existencias') }}">Existencias</a>
+      <a class="sidebar__link {{ 'active' if active_page == 'movimientos' else '' }}" href="{{ url_for('movimientos') }}">Movimientos</a>
+      <a class="sidebar__link {{ 'active' if active_page == 'catalogo' else '' }}" href="{{ url_for('catalogo') }}">Catálogo</a>
+      <a class="sidebar__link {{ 'active' if active_page == 'ubicaciones' else '' }}" href="{{ url_for('ubicaciones') }}">Ubicaciones</a>
+    </nav>
+    <div style="margin-top: auto;">
+      <a class="sidebar__link" href="{{ url_for('logout') }}">Cerrar sesión</a>
+    </div>
+  </aside>
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <div>{{ message }}</div>
+            <button type="button" class="alert__close" onclick="this.closest('.alert').remove()">✕</button>
+          </div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

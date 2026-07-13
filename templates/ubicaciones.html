@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% set active_page = "ubicaciones" %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">Ubicaciones</div>
+    <div class="page-subtitle">Puntos de venta y bodegas — se crean y nombran libremente.</div>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('dlg-location').showModal()">Nueva ubicación</button>
+</div>
+
+{% if locations|length == 0 %}
+  <div class="empty-state">
+    <div class="empty-state__title">Crea tu primera ubicación</div>
+    <div class="empty-state__body">Cada punto de venta y cada bodega, con nombre propio.</div>
+  </div>
+{% else %}
+<div class="locations-grid">
+  {% for loc in locations %}
+    <div class="location-card">
+      <div class="location-card__type location-card__type--{{ loc.type }}">{{ loc.type }}</div>
+      <div class="location-card__name">{{ loc.name }}</div>
+      <div class="location-card__total">{{ loc.total }} <small>un. en total</small></div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<dialog class="modal" id="dlg-location">
+  <form method="post" action="{{ url_for('ubicaciones_nueva') }}">
+    <div class="modal__header"><div class="modal__title">Nueva ubicación</div></div>
+    <div class="modal__body">
+      <label class="field">
+        <span class="field__label">Nombre</span>
+        <input class="input" type="text" name="name" placeholder="Ej. Bodega Norte" required>
+      </label>
+      <label class="field">
+        <span class="field__label">Tipo</span>
+        <select class="select" name="type" required>
+          <option value="bodega">Bodega</option>
+          <option value="punto">Punto de venta</option>
+        </select>
+      </label>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('dlg-location').close()">Cancelar</button>
+      <button type="submit" class="btn btn-primary btn-sm">Crear ubicación</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% set active_page = "existencias" %}
+{% block content %}
+<div class="page-title">Existencias</div>
+<div class="page-subtitle">Cuánto hay de cada producto, y dónde — en un solo lugar.</div>
+
+<div class="stat-row">
+  <div class="stat-card">
+    <div class="stat-card__label">Productos en catálogo</div>
+    <div class="stat-card__value">{{ products|length }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__label">Ubicaciones</div>
+    <div class="stat-card__value">{{ locations|length }}</div>
+  </div>
+  <div class="stat-card {{ 'stat-card--warning' if alert_count > 0 else '' }}">
+    <div class="stat-card__label">Productos en alerta</div>
+    <div class="stat-card__value">{{ alert_count }}</div>
+  </div>
+</div>
+
+{% if products|length == 0 %}
+  <div class="empty-state">
+    <div class="empty-state__title">Importa tu catálogo para empezar</div>
+    <div class="empty-state__body">Ve a <a href="{{ url_for('catalogo') }}" class="btn-link">Catálogo</a> para crear ubicaciones y cargar tus productos.</div>
+  </div>
+{% else %}
+  <div class="search-wrap">
+    <input class="input" type="text" id="existencias-search" placeholder="Buscar por código o descripción…" value="{{ query }}">
+  </div>
+
+  <div class="list" id="existencias-list">
+    {% for p in products %}
+      <div class="product-row" data-search="{{ (p.sku ~ ' ' ~ p.name)|lower }}">
+        <div class="product-row__summary" onclick="this.closest('.product-row').classList.toggle('open')">
+          <div class="product-row__photo" {% if p.photo %}style="background-image:url('{{ p.photo }}')"{% endif %}>{% if not p.photo %}Foto{% endif %}</div>
+          <div class="product-row__body">
+            <div class="product-row__sku">{{ p.sku }}</div>
+            <div class="product-row__name">{{ p.name }}</div>
+          </div>
+          <span class="badge badge-{{ p.status.tone }}">{{ p.status.label }}</span>
+          <div class="product-row__total">{{ p.total }} <small>un.</small></div>
+        </div>
+        <div class="product-row__detail">
+          {% for loc in p.breakdown %}
+            <div class="product-row__loc-line">
+              <span>{{ loc.name }} <span class="product-row__loc-type">{{ loc.type }}</span></span>
+              <span style="font-weight:600;">{{ loc.qty }} un.</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="no-results" id="existencias-empty" style="display:none;">No hay ningún producto que coincida con tu búsqueda.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var input = document.getElementById("existencias-search");
+  if (!input) return;
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#existencias-list .product-row"));
+  var emptyMsg = document.getElementById("existencias-empty");
+  function filter() {
+    var q = input.value.trim().toLowerCase();
+    var visible = 0;
+    rows.forEach(function (row) {
+      var match = row.getAttribute("data-search").indexOf(q) !== -1;
+      row.style.display = match ? "" : "none";
+      if (match) visible++;
+    });
+    emptyMsg.style.display = visible === 0 ? "block" : "none";
+  }
+  input.addEventListener("input", filter);
+})();
+</script>
+{% endblock %}

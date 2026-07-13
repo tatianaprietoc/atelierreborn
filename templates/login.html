@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier Reborn — Iniciar sesión</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/typography.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/spacing.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-card__brand">Atelier Reborn</div>
+    <div class="login-card__subtitle">Control de inventarios</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}"><div>{{ message }}</div></div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('login') }}" style="display:flex;flex-direction:column;gap:16px;">
+      <label class="field">
+        <span class="field__label">Contraseña</span>
+        <input class="input" type="password" name="password" placeholder="••••••••" autofocus required>
+      </label>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+    <div class="login-card__footer">Acceso de una sola contraseña — sin registro ni cuentas.</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+/* Atelier Reborn — Color tokens
+   Base palette updated per user-provided Adobe Color swatch (slate/carbon ramp):
+   Marfil, Crema, Gris cálido, Negro carbón, Chocolate re-mapped to this cooler ramp.
+   Semantic accents (success/warning/danger) are not in the source —
+   derived to sit harmoniously alongside the new cooler neutrals. */
+
+:root {
+  /* Base palette (names kept from source doc, values updated to new swatch) */
+  --marfil: #E1E1D9;      /* ivory / lightest */
+  --crema: #C6C8BD;       /* cream / secondary surface */
+  --taupe: #8D928E;
+  --gris-calido: #8D928E; /* warm gray -> now cool slate gray */
+  --negro-carbon: #17242D;/* near-black slate */
+  --chocolate: #2D3E48;   /* accent — dark slate blue */
+
+  /* Derived tints/shades for surfaces + states */
+  --chocolate-dark: #1D2932;
+  --chocolate-light: #4C5D68;
+  --taupe-light: #D3D5CC;
+  --marfil-dim: #D8D8CE;
+
+  /* Semantic accents — derived to sit alongside the cooler slate neutrals */
+  --success: #5F7A63;      /* muted sage — "stock ok" */
+  --success-tint: #E3E9E1;
+  --warning: #A98247;      /* muted ochre — "stock low" */
+  --warning-tint: #ECE4D2;
+  --danger: #9C4A3E;       /* muted brick — "stock critical / error" */
+  --danger-tint: #EDDEDA;
+
+  /* Semantic aliases */
+  --bg-page: var(--marfil);
+  --bg-surface: #FFFFFF;
+  --bg-surface-alt: var(--crema);
+  --bg-sunken: var(--marfil-dim);
+
+  --border-subtle: var(--taupe-light);
+  --border-default: var(--taupe);
+  --border-strong: var(--gris-calido);
+
+  --text-primary: var(--negro-carbon);
+  --text-secondary: var(--gris-calido);
+  --text-on-accent: var(--marfil);
+  --text-muted: #9AA09B;
+
+  --accent-primary: var(--chocolate);
+  --accent-primary-hover: var(--chocolate-dark);
+  --accent-primary-tint: #DCE1E3;
+
+  --focus-ring: #4C5D68;
+}

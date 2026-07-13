@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% set active_page = "catalogo" %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">Catálogo</div>
+    <div class="page-subtitle">Código, foto y descripción — empezando por los SKUs que más se confunden.</div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-secondary" onclick="document.getElementById('dlg-import-catalogo').showModal()">Importar catálogo (CSV)</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('dlg-import-stock').showModal()">Importar existencias (CSV)</button>
+    <button class="btn btn-primary" onclick="openCreateDialog()">Nuevo producto</button>
+  </div>
+</div>
+
+{% if products|length == 0 %}
+  <div class="empty-state">
+    <div class="empty-state__title">Importa tu catálogo para empezar</div>
+    <div class="empty-state__body">O crea tu primer producto manualmente con "Nuevo producto".</div>
+  </div>
+{% else %}
+  <div class="search-wrap">
+    <input class="input" type="text" id="catalogo-search" placeholder="Buscar por código o descripción…" value="{{ query }}">
+  </div>
+
+  <div class="list" id="catalogo-list">
+    {% for p in products %}
+      <div class="catalog-row" data-search="{{ (p.sku ~ ' ' ~ p.name)|lower }}">
+        <div class="product-row__photo" {% if p.photo %}style="background-image:url('{{ p.photo }}')"{% endif %}>{% if not p.photo %}Foto{% endif %}</div>
+        <div style="flex:1;">
+          <div class="product-row__sku">{{ p.sku }}</div>
+          <div class="product-row__name">{{ p.name }}</div>
+        </div>
+        <div class="catalog-row__min">{{ 'Mínimo: ' ~ p.min_stock ~ ' un.' if p.min_stock is not none else 'Sin mínimo' }}</div>
+        <span class="badge badge-{{ p.status.tone }}">{{ p.status.label }}</span>
+        <div class="catalog-row__total">{{ p.total }}</div>
+        <div class="catalog-row__actions">
+          <button type="button" class="btn btn-ghost btn-sm"
+            onclick='openEditDialog({{ {"sku": p.sku, "name": p.name, "min_stock": p.min_stock, "photo": p.photo}|tojson }})'>Editar</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="openDeleteDialog('{{ p.sku }}', '{{ p.name|e }}', {{ p.total }})">Eliminar</button>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="no-results" id="catalogo-empty" style="display:none;">No hay ningún producto que coincida con tu búsqueda. <span class="btn-link" onclick="openCreateDialog()">Crear producto</span></div>
+{% endif %}
+
+<!-- Crear / editar producto -->
+<dialog class="modal" id="dlg-product">
+  <form method="post" id="form-product" enctype="multipart/form-data">
+    <div class="modal__header">
+      <div class="modal__title" id="dlg-product-title">Nuevo producto</div>
+    </div>
+    <div class="modal__body">
+      <div>
+        <div class="field__label" style="margin-bottom:6px;">Foto</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="product-row__photo" id="photo-preview" style="width:64px;height:64px;">Foto</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="display:inline-block;">
+              <span class="btn btn-secondary btn-sm" style="display:inline-flex;">Subir foto</span>
+              <input type="file" name="photo" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
+            </label>
+            <button type="button" class="btn-link" id="btn-remove-photo" style="display:none;" onclick="removePhoto()">Quitar foto</button>
+            <input type="hidden" name="remove_photo" id="remove_photo" value="0">
+          </div>
+        </div>
+      </div>
+      <label class="field">
+        <span class="field__label">Código (SKU)</span>
+        <input class="input" type="text" name="sku" id="field-sku" placeholder="RO-0123" required>
+      </label>
+      <label class="field">
+        <span class="field__label">Descripción</span>
+        <input class="input" type="text" name="name" id="field-name" placeholder="Vestido midi negro" required>
+      </label>
+      <label class="field">
+        <span class="field__label">Stock mínimo (opcional)</span>
+        <input class="input" type="number" name="min_stock" id="field-min" placeholder="Sin mínimo" min="0">
+        <span class="field__helper">Comparado contra el total en todas las ubicaciones.</span>
+      </label>
+      <div class="field__helper" id="create-note">El producto inicia con 0 unidades en cada ubicación. Registra una entrada o importa existencias para cargar cantidades.</div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('dlg-product').close()">Cancelar</button>
+      <button type="submit" class="btn btn-primary btn-sm" id="btn-save-product">Crear producto</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Eliminar producto -->
+<dialog class="modal" id="dlg-delete">
+  <form method="post" id="form-delete">
+    <div class="modal__header"><div class="modal__title">Eliminar producto</div></div>
+    <div class="modal__body">
+      <div id="delete-body" style="font-size:0.9375rem;color:var(--text-secondary);line-height:1.5;"></div>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('dlg-delete').close()">Cancelar</button>
+      <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Importar catálogo -->
+<dialog class="modal" id="dlg-import-catalogo" style="width:520px;">
+  <div class="modal__header"><div class="modal__title">Importar catálogo (CSV)</div></div>
+  <form method="post" action="{{ url_for('catalogo_importar_preview') }}" enctype="multipart/form-data">
+    <div class="modal__body">
+      <div class="field__helper">Columnas esperadas: <code>sku</code> (o <code>codigo</code>), <code>nombre</code> (o <code>descripcion</code>), y opcionalmente <code>minimo</code>.</div>
+      <input class="input" type="file" name="archivo" accept=".csv" required>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('dlg-import-catalogo').close()">Cancelar</button>
+      <button type="submit" class="btn btn-primary btn-sm">Ver vista previa</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Importar existencias -->
+<dialog class="modal" id="dlg-import-stock" style="width:520px;">
+  <div class="modal__header"><div class="modal__title">Importar existencias (CSV)</div></div>
+  <form method="post" action="{{ url_for('existencias_importar_preview') }}" enctype="multipart/form-data">
+    <div class="modal__body">
+      <div class="field__helper">Columnas esperadas: <code>sku</code>, <code>ubicacion</code>, <code>cantidad</code>.</div>
+      <input class="input" type="file" name="archivo" accept=".csv" required>
+    </div>
+    <div class="modal__footer">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('dlg-import-stock').close()">Cancelar</button>
+      <button type="submit" class="btn btn-primary btn-sm">Ver vista previa</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Vista previa de importación (poblado por servidor si preview existe) -->
+<dialog class="modal" id="dlg-preview" style="width:560px;">
+  {% if preview %}
+  <div class="modal__header">
+    <div class="modal__title">Vista previa de importación</div>
+  </div>
+  <div class="modal__body">
+    <div style="font-size:0.9375rem;color:var(--text-secondary);line-height:1.5;">
+      <b style="color:var(--text-primary);">{{ preview.rows|length }} filas</b> encontradas en <code>{{ preview.filename }}</code>.
+      {% if preview.issue_count > 0 %}
+        <b style="color:var(--danger);">{{ preview.issue_count }} con problema</b> — no se importarán hasta corregirse.
+      {% else %}
+        Todas las filas son válidas.
+      {% endif %}
+    </div>
+    <div class="import-table">
+      {% for row in preview.rows[:200] %}
+        <div class="import-table__row {{ 'import-table__row--issue' if row.issue else '' }}">
+          <span class="import-table__sku">{{ row.sku or '—' }}</span>
+          {% if preview.kind == 'catalogo' %}
+            <span class="import-table__desc">{{ row.name or '—' }}{% if row.min_stock is not none %} · mín. {{ row.min_stock }}{% endif %}{% if row.is_update and not row.issue %} <em>(actualiza existente)</em>{% endif %}</span>
+          {% else %}
+            <span class="import-table__desc">{{ row.location or '—' }}{% if row.qty is not none %} · {{ row.qty }} un.{% endif %}</span>
+          {% endif %}
+          {% if row.issue %}<span class="import-table__issue">{{ row.issue }}</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="modal__footer">
+    <form method="get" action="{{ url_for('catalogo') }}" style="display:inline;">
+      <button type="submit" class="btn btn-secondary btn-sm">Cancelar</button>
+    </form>
+    <form method="post" action="{{ url_for('importar_confirmar') }}" style="display:inline;">
+      <input type="hidden" name="import_id" value="{{ import_id }}">
+      <button type="submit" class="btn btn-primary btn-sm" {{ 'disabled' if preview.valid_count == 0 else '' }}>Importar {{ preview.valid_count }} filas válidas</button>
+    </form>
+  </div>
+  {% endif %}
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openCreateDialog() {
+  document.getElementById('dlg-product-title').textContent = 'Nuevo producto';
+  document.getElementById('btn-save-product').textContent = 'Crear producto';
+  document.getElementById('form-product').action = "{{ url_for('catalogo_nuevo') }}";
+  document.getElementById('field-sku').value = '';
+  document.getElementById('field-name').value = '';
+  document.getElementById('field-min').value = '';
+  document.getElementById('remove_photo').value = '0';
+  document.getElementById('create-note').style.display = 'block';
+  setPhotoPreview(null);
+  document.getElementById('dlg-product').showModal();
+}
+function openEditDialog(p) {
+  document.getElementById('dlg-product-title').textContent = 'Editar producto';
+  document.getElementById('btn-save-product').textContent = 'Guardar cambios';
+  document.getElementById('form-product').action = "/catalogo/editar/" + encodeURIComponent(p.sku);
+  document.getElementById('field-sku').value = p.sku;
+  document.getElementById('field-name').value = p.name;
+  document.getElementById('field-min').value = p.min_stock !== null ? p.min_stock : '';
+  document.getElementById('remove_photo').value = '0';
+  document.getElementById('create-note').style.display = 'none';
+  setPhotoPreview(p.photo);
+  document.getElementById('dlg-product').showModal();
+}
+function setPhotoPreview(photo) {
+  var el = document.getElementById('photo-preview');
+  var removeBtn = document.getElementById('btn-remove-photo');
+  if (photo) {
+    el.style.backgroundImage = "url('" + photo + "')";
+    el.textContent = '';
+    removeBtn.style.display = 'inline';
+  } else {
+    el.style.backgroundImage = '';
+    el.textContent = 'Foto';
+    removeBtn.style.display = 'none';
+  }
+}
+function previewPhoto(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () { setPhotoPreview(reader.result); };
+  reader.readAsDataURL(file);
+}
+function removePhoto() {
+  document.getElementById('remove_photo').value = '1';
+  setPhotoPreview(null);
+}
+function openDeleteDialog(sku, name, total) {
+  document.getElementById('form-delete').action = "/catalogo/eliminar/" + encodeURIComponent(sku);
+  var msg = '¿Eliminar <b style="color:var(--text-primary);">' + sku + ' — ' + name + '</b>? Esta acción no se puede deshacer';
+  if (total > 0) msg += ' y hay <b style="color:var(--text-primary);">' + total + ' unidades</b> registradas en inventario';
+  msg += '.';
+  document.getElementById('delete-body').innerHTML = msg;
+  document.getElementById('dlg-delete').showModal();
+}
+
+(function () {
+  var input = document.getElementById("catalogo-search");
+  if (!input) return;
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#catalogo-list .catalog-row"));
+  var emptyMsg = document.getElementById("catalogo-empty");
+  function filter() {
+    var q = input.value.trim().toLowerCase();
+    var visible = 0;
+    rows.forEach(function (row) {
+      var match = row.getAttribute("data-search").indexOf(q) !== -1;
+      row.style.display = match ? "" : "none";
+      if (match) visible++;
+    });
+    emptyMsg.style.display = visible === 0 ? "block" : "none";
+  }
+  input.addEventListener("input", filter);
+})();
+
+{% if preview %}
+document.getElementById('dlg-preview').showModal();
+{% endif %}
+</script>
+{% endblock %}
