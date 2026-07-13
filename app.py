@@ -283,7 +283,7 @@ def catalogo_nuevo():
             return redirect(url_for("catalogo"))
 
     existing = conn.execute(
-        "SELECT * FROM products WHERE sku = ? COLLATE NOCASE", (sku,)
+        "SELECT * FROM products WHERE LOWER(sku) = LOWER(?)", (sku,)
     ).fetchone()
     if existing:
         flash(
@@ -338,7 +338,7 @@ def catalogo_editar(sku):
             return redirect(url_for("catalogo"))
 
     duplicate = conn.execute(
-        "SELECT * FROM products WHERE sku = ? COLLATE NOCASE AND sku != ?",
+        "SELECT * FROM products WHERE LOWER(sku) = LOWER(?) AND sku != ?",
         (new_sku, sku),
     ).fetchone()
     if duplicate:
@@ -640,14 +640,14 @@ def ubicaciones_nueva():
         return redirect(url_for("ubicaciones"))
 
     conn = db.get_connection()
-    existing = conn.execute("SELECT 1 FROM locations WHERE name = ? COLLATE NOCASE", (name,)).fetchone()
+    existing = conn.execute("SELECT 1 FROM locations WHERE LOWER(name) = LOWER(?)", (name,)).fetchone()
     if existing:
         flash(f'Ya existe una ubicación llamada "{name}".', "danger")
         conn.close()
         return redirect(url_for("ubicaciones"))
 
-    cur = conn.execute("INSERT INTO locations (name, type) VALUES (?, ?)", (name, loc_type))
-    new_id = cur.lastrowid
+    cur = conn.execute("INSERT INTO locations (name, type) VALUES (?, ?) RETURNING id", (name, loc_type))
+    new_id = cur.fetchone()["id"]
     products = conn.execute("SELECT sku FROM products").fetchall()
     for p in products:
         db.set_stock_qty(conn, p["sku"], new_id, 0)

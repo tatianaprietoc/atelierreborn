@@ -82,7 +82,7 @@
         {% if h.dest_name %} → {{ h.dest_name }}{% endif %}
       </span>
       <span class="movement-row__qty">{{ h.qty }} un.</span>
-      <span class="movement-row__date">{{ h.created_at[5:10] }}</span>
+      <span class="movement-row__date">{{ h.created_at.strftime('%m-%d') }}</span>
     </div>
   {% endfor %}
 </div>

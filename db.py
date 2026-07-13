@@ -1,20 +1,46 @@
 import os
-import sqlite3
+
+import psycopg2
+import psycopg2.extras
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "data", "inventario.db")
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+
+class Connection:
+    """Thin wrapper so the rest of the app can keep calling conn.execute(...)
+    with '?' placeholders, like it did against sqlite3, while actually
+    talking to Postgres (needed for Vercel: serverless functions have no
+    persistent local disk, so SQLite can't be used there)."""
+
+    def __init__(self, pg_conn):
+        self._conn = pg_conn
+
+    def execute(self, sql, params=()):
+        cur = self._conn.cursor()
+        cur.execute(sql.replace("?", "%s"), params)
+        return cur
+
+    def executescript(self, sql):
+        cur = self._conn.cursor()
+        cur.execute(sql)
+        cur.close()
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    pg_conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return Connection(pg_conn)
 
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_connection()
     with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
         conn.executescript(f.read())

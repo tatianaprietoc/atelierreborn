@@ -1,10 +1,8 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS locations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     type TEXT NOT NULL CHECK (type IN ('bodega', 'punto')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -12,7 +10,7 @@ CREATE TABLE IF NOT EXISTS products (
     name TEXT NOT NULL,
     min_stock INTEGER,
     photo TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS stock (
@@ -23,12 +21,12 @@ CREATE TABLE IF NOT EXISTS stock (
 );
 
 CREATE TABLE IF NOT EXISTS movements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     type TEXT NOT NULL CHECK (type IN ('entrada', 'salida', 'traslado')),
     product_sku TEXT NOT NULL REFERENCES products(sku) ON DELETE CASCADE,
     origin_location_id INTEGER REFERENCES locations(id),
     dest_location_id INTEGER REFERENCES locations(id),
     qty INTEGER NOT NULL,
     note TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

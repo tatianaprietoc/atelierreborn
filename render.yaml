@@ -6,16 +6,11 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
+      - key: DATABASE_URL
+        sync: false
       - key: APP_PASSWORD
         sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: REQUIRE_PASSWORD
         value: "true"
-    # El plan "free" no incluye disco persistente: el archivo SQLite se
-    # reinicia cuando el servicio se duerme por inactividad o se redespliega.
-    # Para inventario real, sube al plan "starter" (o superior) y descomenta:
-    # disk:
-    #   name: atelier-reborn-data
-    #   mountPath: /opt/render/project/src/data
-    #   sizeGB: 1

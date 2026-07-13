@@ -9,39 +9,35 @@ Reborn` (handoff de Claude Design).
 
 ## Stack
 
-Python 3 + Flask + SQLite. Sin dependencias de Node/npm — pensado para correr con lo
-que ya trae macOS más un `pip install` a nivel de usuario.
+Python 3 + Flask + Postgres (Supabase). La base de datos es Postgres (no SQLite)
+para poder correr en Vercel: las funciones serverless no tienen disco persistente,
+así que el inventario necesita vivir en una base de datos externa.
 
-## Cómo correrlo
+## Variables de entorno
+
+Copia `.env.example` a `.env` (o expórtalas en tu shell) y ajusta:
+
+- `DATABASE_URL` — connection string de Postgres. En Supabase: **Project Settings
+  → Database → Connection string → URI** (usa el modo "Transaction pooler" para
+  entornos serverless como Vercel).
+- `APP_PASSWORD` — la contraseña única de acceso. Sin default seguro: defínela.
+- `SECRET_KEY` — clave para firmar la sesión de Flask. Usa un valor aleatorio propio.
+- `REQUIRE_PASSWORD` — `true` pide la contraseña en un login; `false` deja entrar a
+  cualquiera sin pedir nada (útil para pruebas compartidas, no para datos reales).
+- `PORT` — solo relevante corriendo local con `python3 app.py` (default 5050).
+
+## Cómo correrlo en local
 
 ```bash
 cd "atelier-reborn"
 pip3 install --user -r requirements.txt   # solo la primera vez
+export DATABASE_URL="postgresql://postgres:tu-contraseña@db.tu-proyecto.supabase.co:5432/postgres"
+export APP_PASSWORD="tu-contraseña"
 python3 app.py
 ```
 
-Abre http://localhost:5050 en el navegador.
-
-## Contraseña de acceso
-
-El acceso se controla con dos variables de entorno (ver `.env.example`):
-
-- `APP_PASSWORD` — la contraseña única de acceso. Si no la defines, usa `changeme`
-  por defecto — cámbiala antes de usar la app con datos reales.
-- `REQUIRE_PASSWORD` — en `true` pide la contraseña en un login; en `false` (valor
-  por defecto actual, pensado para pruebas compartidas) deja entrar a cualquiera
-  sin pedir nada. Ponla en `true` para producción.
-
-```bash
-export APP_PASSWORD="tu-contraseña-nueva"
-export REQUIRE_PASSWORD=true
-python3 app.py
-```
-
-## Datos
-
-Todo se guarda en `data/inventario.db` (SQLite), creado automáticamente la primera
-vez que corres `python3 app.py`. Para reiniciar desde cero, borra ese archivo.
+Abre http://localhost:5050 en el navegador. El esquema de tablas se crea solo la
+primera vez que arranca (`CREATE TABLE IF NOT EXISTS`).
 
 ## Primer uso
 
@@ -54,21 +50,24 @@ vez que corres `python3 app.py`. Para reiniciar desde cero, borra ese archivo.
 5. Usa **Movimientos** para registrar entradas, salidas y traslados del día a día.
 6. Usa **Existencias** para consultar cuánto hay de cada producto, por ubicación.
 
-## Desplegar en Render
+## Desplegar en Vercel
 
-Esta app **no funciona en Vercel** (necesita un proceso persistente, no funciones
-serverless). Render sí sirve porque mantiene el proceso corriendo:
+1. En Supabase, entra al **SQL Editor** de tu proyecto, pega el contenido de
+   `schema.sql` y ejecútalo una vez (crea las tablas).
+2. En [vercel.com](https://vercel.com), **Add New** → **Project**, importa este
+   repositorio de GitHub (`atelierreborn`). Vercel detecta `vercel.json` y
+   `api/index.py` automáticamente como función Python.
+3. En **Environment Variables**, agrega `DATABASE_URL`, `APP_PASSWORD`,
+   `SECRET_KEY` y `REQUIRE_PASSWORD` (los mismos valores de `.env.example`, con tus
+   datos reales de Supabase).
+4. Deploy.
 
-1. En [render.com](https://render.com), **New +** → **Blueprint**, y conecta este
-   repositorio de GitHub. Render detecta `render.yaml` automáticamente.
-2. Te pedirá el valor de `APP_PASSWORD` (no tiene un default seguro en producción).
-3. Deploy. La URL pública queda como `https://atelier-reborn.onrender.com` (o el
-   nombre que Render asigne).
+Como el inventario vive en Supabase (no en el disco de la función), no hay
+problema de persistencia: los datos sobreviven a cada nueva invocación o deploy.
 
-**Importante sobre el plan gratuito:** el plan `free` de Render **no incluye disco
-persistente** — el archivo `data/inventario.db` se reinicia cuando el servicio se
-duerme por inactividad (a los 15 min) o cuando vuelves a desplegar. Sirve para que
-varias personas prueben la interfaz, pero no para guardar inventario real.
+## Alternativa: Render
 
-Para que los datos persistan de verdad, sube al plan **Starter** (de pago) y
-descomenta el bloque `disk:` en `render.yaml` antes de desplegar.
+`render.yaml` también queda configurado por si prefieres Render en vez de Vercel
+(mismo código, mismo `DATABASE_URL` de Supabase — solo cambia dónde corre el
+proceso). En Render: **New +** → **Blueprint** → conectar el repo → agregar las
+mismas variables de entorno.
