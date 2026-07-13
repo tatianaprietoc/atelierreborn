@@ -657,7 +657,8 @@ def ubicaciones_nueva():
     return redirect(url_for("ubicaciones"))
 
 
+db.init_db()
+
 if __name__ == "__main__":
-    db.init_db()
     port = int(os.environ.get("PORT", 5050))
     app.run(debug=True, port=port)
