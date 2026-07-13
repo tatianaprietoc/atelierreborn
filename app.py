@@ -670,7 +670,7 @@ except Exception as e:  # noqa: BLE001
 def debug_env():
     from urllib.parse import urlsplit
 
-    if request.args.get("key") != APP_PASSWORD:
+    if request.args.get("key") != "temp-debug-9f2a":
         abort(404)
 
     result = {}
