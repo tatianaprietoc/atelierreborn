@@ -661,34 +661,8 @@ try:
     db.init_db()
 except Exception as e:  # noqa: BLE001
     # Don't let a bad DATABASE_URL take down the whole app at import time —
-    # individual routes already fail gracefully via db.get_connection(), and
-    # this keeps /debug/env reachable to diagnose a misconfigured env var.
+    # individual routes already fail gracefully via db.get_connection() instead.
     app.logger.error("db.init_db() failed at startup: %s", e)
-
-
-@app.route("/debug/env")
-def debug_env():
-    from urllib.parse import urlsplit
-
-    if request.args.get("key") != "temp-debug-9f2a":
-        abort(404)
-
-    result = {}
-    for name in ("DATABASE_URL", "POSTGRES_URL", "POSTGRES_URL_NON_POOLING", "POSTGRES_PRISMA_URL"):
-        raw = os.environ.get(name)
-        if not raw:
-            result[name] = None
-            continue
-        parts = urlsplit(raw)
-        result[name] = {
-            "length": len(raw),
-            "scheme": parts.scheme,
-            "host": parts.hostname,
-            "port": parts.port,
-            "path": parts.path,
-            "query": parts.query,
-        }
-    return result
 
 
 if __name__ == "__main__":
