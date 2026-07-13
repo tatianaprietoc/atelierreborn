@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
 
 import psycopg2
 import psycopg2.extras
@@ -6,16 +7,30 @@ import psycopg2.extras
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
+# Query-string keys libpq/psycopg2 actually understands. Vercel's Supabase
+# marketplace integration has been observed injecting extra, unrecognized
+# (sometimes outright corrupted, e.g. "supa=base-pooler.x") query params —
+# strip anything not on this list rather than trust the value verbatim.
+_LIBPQ_QUERY_ALLOWLIST = {"sslmode", "connect_timeout", "application_name", "target_session_attrs", "options"}
+
+
+def _sanitize_dsn(raw):
+    parts = urlsplit(raw)
+    clean_query = urlencode([(k, v) for k, v in parse_qsl(parts.query) if k in _LIBPQ_QUERY_ALLOWLIST])
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, clean_query, parts.fragment))
+
+
 # DATABASE_URL works if you set it by hand. If you connect the project through
 # Vercel's Supabase marketplace integration instead, it injects the connection
 # string under one of these names instead — check whichever is actually set.
 # (Skips POSTGRES_PRISMA_URL: it has a "?pgbouncer=true" suffix meant for
 # Prisma that psycopg2/libpq doesn't recognize as a connection parameter.)
-DATABASE_URL = (
+_RAW_DATABASE_URL = (
     os.environ.get("DATABASE_URL")
     or os.environ.get("POSTGRES_URL")
     or os.environ.get("POSTGRES_URL_NON_POOLING")
 )
+DATABASE_URL = _sanitize_dsn(_RAW_DATABASE_URL) if _RAW_DATABASE_URL else None
 
 
 class Connection:
